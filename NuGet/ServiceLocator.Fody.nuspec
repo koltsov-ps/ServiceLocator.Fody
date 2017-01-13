@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata minClientVersion="2.8">
+    <id>ServiceLocator.Fody</id>
+    <version>$version$</version>
+    <title>ServiceLocator.Fody</title>
+    <authors>Pavel Koltsov</authors>
+    <owners>Pavel Koltsov</owners>
+    <developmentDependency>true</developmentDependency>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>https://github.com/koltsov-ps/ServiceLocator.Fody</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <iconUrl>https://raw.github.com/koltsov-ps/ServiceLocator.Fody/master/Icons/package_icon.png</iconUrl>
+    <description>Compile-time dependency injection Fody add-in.</description>
+    <summary />
+    <language>en-US</language>
+    <tags>ILWeaving, Fody, Cecil, IoC, DI</tags>
+    <dependencies>
+      <dependency id="Fody"/>
+    </dependencies>
+  </metadata>
+</package>

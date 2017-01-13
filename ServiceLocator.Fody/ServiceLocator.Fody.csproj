@@ -8,8 +8,8 @@
     <ProjectGuid>{C3578A7B-09A6-4444-9383-0DEAFA4958BD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BasicFodyAddin.Fody</RootNamespace>
-    <AssemblyName>BasicFodyAddin.Fody</AssemblyName>
+    <RootNamespace>ServiceLocator.Fody</RootNamespace>
+    <AssemblyName>ServiceLocator.Fody</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -58,10 +58,30 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="DependencyEngine\ConstructorMethod.cs" />
+    <Compile Include="DependencyEngine\Container.cs" />
+    <Compile Include="DependencyEngine\CreationMethod.cs" />
+    <Compile Include="DependencyEngine\DependencyGraph.cs" />
+    <Compile Include="DependencyEngine\Emission.cs" />
+    <Compile Include="DependencyEngine\FactoryMethod.cs" />
+    <Compile Include="Emitter.cs" />
+    <Compile Include="GraphMechanics\CyclicDependencyGraphException.cs" />
+    <Compile Include="GraphMechanics\GraphException.cs" />
+    <Compile Include="GraphMechanics\GraphTopSort.cs" />
+    <Compile Include="GraphMechanics\IGraphNode.cs" />
+    <Compile Include="DependencyEngine\ImplementationNode.cs" />
+    <Compile Include="DependencyEngine\IQueryNode.cs" />
     <Compile Include="ModuleWeaver.cs" />
+    <Compile Include="DependencyEngine\QueryNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceLocator\ServiceLocator.csproj">
+      <Project>{1f04113c-c08e-452b-a07f-b72078813f32}</Project>
+      <Name>ServiceLocator</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
