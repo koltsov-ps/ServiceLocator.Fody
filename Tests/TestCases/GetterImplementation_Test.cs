@@ -5,7 +5,7 @@ using Tests.Helpers;
 namespace Tests.TestCases
 {
 	[TestFixture]
-	public class MethodsImplementation_Test
+	public class GetterImplementation_Test
 	{
 		private dynamic serviceLocator;
 

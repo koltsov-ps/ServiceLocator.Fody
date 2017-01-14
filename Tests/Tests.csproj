@@ -71,11 +71,13 @@
     <Compile Include="TestCases\CustomConstructor_Test.cs" />
     <Compile Include="TestCases\Errors_Test.cs" />
     <Compile Include="TestCases\ExpectedGeneration_Test.cs" />
+    <Compile Include="TestCases\CreateImplementation_Test.cs" />
+    <Compile Include="TestCases\MultiAssembly_Expected_Test.cs" />
     <Compile Include="TestCases\MultiAssembly_Test.cs" />
     <Compile Include="TestCases\PropertiesImplementationTest.cs" />
     <Compile Include="Helpers\Verifier.cs" />
     <Compile Include="Helpers\WeaverHelper.cs" />
-    <Compile Include="TestCases\MethodsImplementation_Test.cs" />
+    <Compile Include="TestCases\GetterImplementation_Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ServiceLocator.Fody\ServiceLocator.Fody.csproj">

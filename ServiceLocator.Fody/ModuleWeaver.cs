@@ -4,6 +4,7 @@ using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using ServiceLocator.Fody.DependencyEngine;
+using ServiceLocator.Fody.Utils;
 using ServiceLocatorKit;
 
 public partial class ModuleWeaver
@@ -21,7 +22,6 @@ public partial class ModuleWeaver
 		FindTargetClasses();
 	}
 }
-
 
 public partial class ModuleWeaver
 {
@@ -42,7 +42,7 @@ public partial class ModuleWeaver
 	public void FindTargetClasses()
 	{
 		var allTypes = ModuleDefinition.GetTypes().ToList();
-		var container = Container.Create(ModuleDefinition);
+		var container = Container.Create(ModuleDefinition, new Log(LogInfo));
 		
 		var serviceLocators = allTypes
 			.Select(x => new { Type = x, Requires = HasServiceLocatorAttributes(x).ToList() })
@@ -58,7 +58,7 @@ public partial class ModuleWeaver
 
 	private void ImplementServiceLocator(TypeDefinition type, TypeDefinition interfaceDef, Container container)
 	{
-		var dependencyGraph = new DependencyGraph(container);
+		var dependencyGraph = new DependencyGraph(container, new Log(LogInfo));
 
 		foreach (var method in type.Methods)
 		{
@@ -66,10 +66,20 @@ public partial class ModuleWeaver
 				continue;
 			dependencyGraph.AddCustomFactoryMethod(method);
 		}
-		
 
 		foreach (var interfaceMethod in interfaceDef.Methods)
-			dependencyGraph.AddEntryPoint(interfaceMethod.ReturnType);
+		{
+			if (interfaceMethod.Name.StartsWith("Create", StringComparison.InvariantCultureIgnoreCase))
+			{
+				var implNode = dependencyGraph.AddCreateEntry(interfaceMethod.ReturnType);
+				implNode.Prototypes.Add(interfaceMethod);
+			}
+			else
+			{
+				var queryNode = dependencyGraph.AddQueryEntry(interfaceMethod.ReturnType);
+				queryNode.Prototypes.Add(interfaceMethod);
+			}
+		}
 		new Emitter().Emit(type, interfaceDef, dependencyGraph);
 	}
 }

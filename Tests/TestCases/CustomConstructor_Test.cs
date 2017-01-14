@@ -45,6 +45,7 @@ namespace Tests.TestCases
 
 		const string testAssemblyCode = @"
 using ServiceLocatorKit;
+using System.IO;
 
 public class A{
 	public A(int value){
@@ -68,12 +69,16 @@ public class C {
 	}
 	public int Value {get;}
 }
+public class D{
+	public D (Stream fs){}
+}
 
 public interface IServiceLocator
 {
 	A A { get; }
 	B B { get; }
 	C C { get; }
+	D D { get; }
 }
 
 [ImplementServiceLocator(typeof(IServiceLocator))]
@@ -81,6 +86,7 @@ public class ServiceLocator {
 	private static A CreateStaticA() { return new A(1); }
 	private B CreateInstanceB(A a) { return new B(a, 2); }
 	private C CreateInstanceC() { return new C(3); }
+	private static Stream CreateFS() => null;
 }";
 	}
 }

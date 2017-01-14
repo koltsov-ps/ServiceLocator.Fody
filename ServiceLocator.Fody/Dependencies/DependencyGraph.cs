@@ -3,30 +3,44 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Mono.Cecil;
 using ServiceLocator.Fody.GraphMechanics;
+using ServiceLocator.Fody.Utils;
 
 namespace ServiceLocator.Fody.DependencyEngine
 {
 	public class DependencyGraph
 	{
 		private readonly Container container;
-		private List<QueryNode> entryPoints = new List<QueryNode>();
+		private readonly ILog log;
+		private List<IGraphNode> entryPoints = new List<IGraphNode>();
 		private List<IGraphNode> allNodes = new List<IGraphNode>();
 
 		private Dictionary<TypeReference, QueryNode> queryNodes = new Dictionary<TypeReference, QueryNode>();
 		private Dictionary<TypeDefinition, ImplementationNode> implNodes = new Dictionary<TypeDefinition, ImplementationNode>();
 
-		public DependencyGraph(Container container)
+		public DependencyGraph(Container container, ILog log)
 		{
 			this.container = container;
+			this.log = log;
 		}
 
-		public ReadOnlyCollection<QueryNode> EntryPoints => new ReadOnlyCollection<QueryNode>(entryPoints);
+		public ReadOnlyCollection<IGraphNode> EntryPoints => new ReadOnlyCollection<IGraphNode>(entryPoints);
 
-		public QueryNode AddEntryPoint(TypeReference queryType)
+		public QueryNode AddQueryEntry(TypeReference queryType)
 		{
 			var queryNode = GetOrCreateQueryNode(queryType);
 			entryPoints.Add(queryNode);
 			return queryNode;
+		}
+
+		public ImplementationNode AddCreateEntry(TypeReference implType)
+		{
+			var impl = FindImpl(implType);
+			ImplementationNode implNode;
+			var implNodeAdded = TryAddImplementation(impl, ConstructorMethod.ChooseConstructor, out implNode);
+			if (implNodeAdded)
+				TraverceCreationMethodParameters(implNode);
+			entryPoints.Add(implNode);
+			return implNode;
 		}
 
 		private QueryNode GetOrCreateQueryNode(TypeReference queryType)
@@ -34,19 +48,12 @@ namespace ServiceLocator.Fody.DependencyEngine
 			QueryNode queryNode;
 			if (queryNodes.TryGetValue(queryType, out queryNode))
 				return queryNode;
+			if (queryNodes.TryGetValue(queryType.Resolve(), out queryNode))
+				return queryNode;
 			if (queryType.IsArray)
 				throw new NotSupportedException($"Array type is not supported yet. {queryType.FullName}");
-			var impl = container.FindImplementation(queryType);
-			if (impl == null)
-			{
-				if (queryType.IsPrimitive)
-					throw new InvalidOperationException($"Primitive types are not supported {queryType.FullName}");
-				var queryTypeDefinition = queryType.Resolve();
-				if (queryTypeDefinition.IsAbstract)
-					throw new InvalidOperationException($"Implementation not found for {queryType.FullName}");
-				impl = queryTypeDefinition;
-			}
 			ImplementationNode implNode;
+			var impl = FindImpl(queryType);
 
 			var implNodeAdded = TryAddImplementation(impl, ConstructorMethod.ChooseConstructor, out implNode);
 			queryNode = new QueryNode(queryType, implNode);
@@ -58,12 +65,30 @@ namespace ServiceLocator.Fody.DependencyEngine
 			return queryNode;
 		}
 
+		private TypeDefinition FindImpl(TypeReference queryType)
+		{
+			var impl = container.FindImplementation(queryType);
+			ImplementationNode implNode;
+			if (impl == null)
+			{
+				if (queryType.IsPrimitive)
+					throw new InvalidOperationException($"Primitive types are not supported {queryType.FullName}");
+				var queryTypeDefinition = queryType.Resolve();
+
+				if (queryTypeDefinition.IsAbstract && !implNodes.TryGetValue(queryTypeDefinition, out implNode))
+					throw new InvalidOperationException($"Implementation not found for {queryType.FullName}");
+				impl = queryTypeDefinition;
+			}
+			return impl;
+		}
+
 		public IGraphNode[] TopSort() => entryPoints.TopSort();
 
 		public void AddCustomFactoryMethod(MethodDefinition factoryMethod)
 		{
 			var typeDefinition = factoryMethod.ReturnType.Resolve();
 			ImplementationNode implNode;
+			log.Info($"Add custom factory: {typeDefinition.Name} => {factoryMethod}");
 			if (TryAddImplementation(typeDefinition, type => FactoryMethod.CreateFromCustomFactory(factoryMethod), out implNode))
 				TraverceCreationMethodParameters(implNode);
 		}

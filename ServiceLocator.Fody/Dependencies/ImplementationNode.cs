@@ -5,21 +5,12 @@ using ServiceLocator.Fody.GraphMechanics;
 
 namespace ServiceLocator.Fody.DependencyEngine
 {
-	public class ImplementationNode : IGraphNode
+	public class ImplementationNode : BaseNode, IGraphNode
 	{
 		public ImplementationNode(TypeDefinition type, CreationMethod creationMethod)
+			: base(type)
 		{
-			Type = type;
 			CreationMethod = creationMethod;
-		}
-
-		public TypeDefinition Type { get; }
-
-		public TypeReference ImportTypeIfNeeded(ModuleDefinition module)
-		{
-			return module != Type.Module
-				? module.ImportReference(Type)
-				: Type;
 		}
 
 		public CreationMethod CreationMethod { get; }

@@ -3,30 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
+using ServiceLocator.Fody.Utils;
 using ServiceLocatorKit;
 
 namespace ServiceLocator.Fody.DependencyEngine
 {
 	public class Container
 	{
+		private readonly HashSet<ModuleDefinition> modules;
+		private ILog log;
 		private readonly Dictionary<TypeReference, List<TypeDefinition>> interfaceImplmentationsMap = new Dictionary<TypeReference, List<TypeDefinition>>();
 
 		public ModuleDefinition MainModule { get; }
 
-		public Container(ModuleDefinition mainModule)
+		public Container(ModuleDefinition mainModule, HashSet<ModuleDefinition> modules, ILog log)
 		{
 			MainModule = mainModule;
+			this.modules = modules;
+			this.log = log;
 		}
 
-		public static Container Create(ModuleDefinition module)
+		public static Container Create(ModuleDefinition module, ILog log)
 		{
-			var container = new Container(module);
-			container.ImportModule(module);
-
 			var additionalModules = GetAdditionalAssemblyNames(module)
 				.Distinct()
 				.Select(name => module.AssemblyResolver.Resolve(module.AssemblyReferences.First(ass => ass.Name == name)))
-				.Select(x => x.MainModule);
+				.SelectMany(x => x.Modules)
+				.ToList();
+			var modules = new HashSet<ModuleDefinition>();
+			modules.Add(module);
+			foreach (var additionalModule in additionalModules)
+				modules.Add(additionalModule);
+
+			var container = new Container(module, modules, log);
+			container.ImportModule(module);
 			foreach (var additionalModule in additionalModules)
 				container.ImportModule(additionalModule);
 
@@ -50,11 +60,16 @@ namespace ServiceLocator.Fody.DependencyEngine
 				foreach (var @interface in interfaces)
 				{
 					List<TypeDefinition> inheritors;
-					if (!interfaceImplmentationsMap.TryGetValue(@interface, out inheritors))
+					var resolvedInterface = modules.Contains(@interface.Module)
+						? @interface.Resolve()
+						: @interface;
+
+					if (!interfaceImplmentationsMap.TryGetValue(resolvedInterface, out inheritors))
 					{
 						inheritors = new List<TypeDefinition>();
-						interfaceImplmentationsMap.Add(@interface, inheritors);
+						interfaceImplmentationsMap.Add(resolvedInterface, inheritors);
 					}
+					log.Info($"Add implementation {type.Name} for interface {resolvedInterface.Name}");
 					inheritors.Add(type);
 				}
 			}

@@ -58,21 +58,24 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="DependencyEngine\ConstructorMethod.cs" />
-    <Compile Include="DependencyEngine\Container.cs" />
-    <Compile Include="DependencyEngine\CreationMethod.cs" />
-    <Compile Include="DependencyEngine\DependencyGraph.cs" />
-    <Compile Include="DependencyEngine\Emission.cs" />
-    <Compile Include="DependencyEngine\FactoryMethod.cs" />
+    <Compile Include="Dependencies\BaseNode.cs" />
+    <Compile Include="Dependencies\ConstructorMethod.cs" />
+    <Compile Include="Dependencies\Container.cs" />
+    <Compile Include="Dependencies\CreationMethod.cs" />
+    <Compile Include="Dependencies\DependencyGraph.cs" />
+    <Compile Include="Dependencies\Emission.cs" />
+    <Compile Include="Dependencies\FactoryMethod.cs" />
     <Compile Include="Emitter.cs" />
-    <Compile Include="GraphMechanics\CyclicDependencyGraphException.cs" />
-    <Compile Include="GraphMechanics\GraphException.cs" />
-    <Compile Include="GraphMechanics\GraphTopSort.cs" />
-    <Compile Include="GraphMechanics\IGraphNode.cs" />
-    <Compile Include="DependencyEngine\ImplementationNode.cs" />
-    <Compile Include="DependencyEngine\IQueryNode.cs" />
+    <Compile Include="Graphs\CyclicDependencyGraphException.cs" />
+    <Compile Include="Graphs\GraphException.cs" />
+    <Compile Include="Graphs\GraphTopSort.cs" />
+    <Compile Include="Graphs\IGraphNode.cs" />
+    <Compile Include="Dependencies\ImplementationNode.cs" />
+    <Compile Include="Dependencies\IQueryNode.cs" />
+    <Compile Include="Utils\ILog.cs" />
+    <Compile Include="Utils\Log.cs" />
     <Compile Include="ModuleWeaver.cs" />
-    <Compile Include="DependencyEngine\QueryNode.cs" />
+    <Compile Include="Dependencies\QueryNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

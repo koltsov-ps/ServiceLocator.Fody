@@ -3,21 +3,17 @@ using ServiceLocator.Fody.GraphMechanics;
 
 namespace ServiceLocator.Fody.DependencyEngine
 {
-	public class QueryNode : IQueryNode
+	public class QueryNode : BaseNode, IQueryNode
 	{
 		public QueryNode(TypeReference type, ImplementationNode impl)
+			: base(type)
 		{
-			Type = type;
 			Impl = impl;
 		}
 
-		public TypeReference Type { get; }
 		public ImplementationNode Impl { get; }
-
-		public Emission Emission { get; set; } = new Emission();
-
+		public Emission Emission { get; } = new Emission();
 		public IGraphNode[] NextNodes => new IGraphNode[] { Impl };
-
 		public override string ToString() => Type.FullName;
 	}
 }
