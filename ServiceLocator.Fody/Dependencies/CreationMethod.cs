@@ -11,7 +11,7 @@ namespace ServiceLocator.Fody.DependencyEngine
 		}
 
 		public MethodDefinition Method { get; }
-		public List<QueryNode> Parameters { get; } = new List<QueryNode>();
+		public List<IQueryNode> Parameters { get; } = new List<IQueryNode>();
 
 		public MethodReference ImportMethodIfNeeded(ModuleDefinition module)
 		{

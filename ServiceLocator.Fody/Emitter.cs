@@ -92,7 +92,10 @@ public class Emitter
 
 	private MethodDefinition CreateMethodDefinitionFromPrototype(MethodDefinition prototype)
 	{
-		return new MethodDefinition(prototype.Name, defaultGetterMethodAttributes, prototype.ReturnType);
+		var method = new MethodDefinition(prototype.Name, defaultGetterMethodAttributes, prototype.ReturnType);
+		foreach (var parameter in prototype.Parameters)
+			method.Parameters.Add(new ParameterDefinition(parameter.Name, parameter.Attributes, parameter.ParameterType));
+		return method;
 	}
 
 	private MethodDefinition CreateMethodDefinition(string prefix, BaseNode implNode)
@@ -132,16 +135,33 @@ public class Emitter
 		return Tuple.Create(method, true);
 	}
 
-	private void EmitMethodParameters(ILProcessor processor, List<QueryNode> parameters)
+	private void EmitMethodParameters(ILProcessor processor, List<IQueryNode> parameters)
 	{
 		foreach (var parameter in parameters)
 		{
-			var getterMethod = parameter.Emission.GetterMethod;
-			if (getterMethod == null)
-				throw new InvalidOperationException("Getter method not found");
-			if (!getterMethod.IsStatic)
-				processor.Emit(OpCodes.Ldarg_0);
-			processor.Emit(OpCodes.Call, getterMethod);
+			var queryNode = parameter as QueryNode;
+			if (queryNode != null)
+			{
+				var getterMethod = queryNode.Emission.GetterMethod;
+				if (getterMethod == null)
+					throw new InvalidOperationException("Getter method not found");
+				if (!getterMethod.IsStatic)
+					processor.Emit(OpCodes.Ldarg_0);
+				processor.Emit(OpCodes.Call, getterMethod);
+			}
+			var parameterNode = parameter as ParameterNode;
+			if (parameterNode != null)
+			{
+				var seq = parameterNode.Parameter.Sequence;
+				if (seq == 1)
+					processor.Emit(OpCodes.Ldarg_1);
+				else if (seq == 2)
+					processor.Emit(OpCodes.Ldarg_2);
+				else if (seq == 3)
+					processor.Emit(OpCodes.Ldarg_3);
+				else
+					processor.Emit(OpCodes.Ldarg_S, seq);
+			}
 		}
 	}
 

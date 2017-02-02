@@ -65,6 +65,7 @@
     <Compile Include="Dependencies\DependencyGraph.cs" />
     <Compile Include="Dependencies\Emission.cs" />
     <Compile Include="Dependencies\FactoryMethod.cs" />
+    <Compile Include="Dependencies\ParameterNode.cs" />
     <Compile Include="Emitter.cs" />
     <Compile Include="Graphs\CyclicDependencyGraphException.cs" />
     <Compile Include="Graphs\GraphException.cs" />

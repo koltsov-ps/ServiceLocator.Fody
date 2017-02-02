@@ -83,7 +83,7 @@ public partial class ModuleWeaver
 		{
 			if (interfaceMethod.Name.StartsWith("Create", StringComparison.InvariantCultureIgnoreCase))
 			{
-				var implNode = dependencyGraph.AddCreateEntry(interfaceMethod.ReturnType);
+				var implNode = dependencyGraph.AddCreateEntry(interfaceMethod);
 				implNode.Prototypes.Add(interfaceMethod);
 			}
 			else

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Mono.Cecil;
 using ServiceLocator.Fody.GraphMechanics;
 using ServiceLocator.Fody.Utils;
@@ -32,13 +33,14 @@ namespace ServiceLocator.Fody.DependencyEngine
 			return queryNode;
 		}
 
-		public ImplementationNode AddCreateEntry(TypeReference implType)
+		public ImplementationNode AddCreateEntry(MethodDefinition method)
 		{
+			var implType = method.ReturnType;
 			var impl = FindImpl(implType);
 			ImplementationNode implNode;
 			var implNodeAdded = TryAddImplementation(impl, ConstructorMethod.ChooseConstructor, out implNode);
 			if (implNodeAdded)
-				TraverceCreationMethodParameters(implNode);
+				TraverceCreationMethodParameters(implNode, method);
 			entryPoints.Add(implNode);
 			return implNode;
 		}
@@ -61,7 +63,7 @@ namespace ServiceLocator.Fody.DependencyEngine
 			allNodes.Add(queryNode);
 
 			if (implNodeAdded)
-				TraverceCreationMethodParameters(implNode);
+				TraverceCreationMethodParameters(implNode, null);
 			return queryNode;
 		}
 
@@ -90,7 +92,7 @@ namespace ServiceLocator.Fody.DependencyEngine
 			ImplementationNode implNode;
 			log.Info($"Add custom factory: {typeDefinition.Name} => {factoryMethod}");
 			if (TryAddImplementation(typeDefinition, type => FactoryMethod.CreateFromCustomFactory(factoryMethod), out implNode))
-				TraverceCreationMethodParameters(implNode);
+				TraverceCreationMethodParameters(implNode, null);
 		}
 
 		private bool TryAddImplementation(TypeDefinition typeDefinition, Func<TypeDefinition, CreationMethod> getCreationMethod, out ImplementationNode implNode)
@@ -102,13 +104,21 @@ namespace ServiceLocator.Fody.DependencyEngine
 			allNodes.Add(implNode);
 			return true;
 		}
-		private void TraverceCreationMethodParameters(ImplementationNode implNode)
+		private void TraverceCreationMethodParameters(ImplementationNode implNode, MethodDefinition prototypeMethod)
 		{
+			Dictionary<string, ParameterNode> dict = null;
+			if (prototypeMethod != null)
+			{
+				dict = prototypeMethod.Parameters
+					.ToDictionary(x => x.Name, x => new ParameterNode(x));
+			}
 			var parameters = implNode.CreationMethod.Method.Parameters;
 			foreach (var parameter in parameters)
 			{
-				var parameterNode = GetOrCreateQueryNode(parameter.ParameterType);
-				implNode.CreationMethod.Parameters.Add(parameterNode);
+				ParameterNode parameterNode = null;
+				dict?.TryGetValue(parameter.Name, out parameterNode);
+				var queryNode = (IQueryNode) parameterNode ?? GetOrCreateQueryNode(parameter.ParameterType);
+				implNode.CreationMethod.Parameters.Add(queryNode);
 			}
 		}
 	}
