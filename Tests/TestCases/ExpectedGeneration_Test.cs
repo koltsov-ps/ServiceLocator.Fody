@@ -71,6 +71,20 @@ public class ServiceLocator
 }");
 		}
 
+		[Test]
+		public static void PropertySetter()
+		{
+			CompileAndDump(@"
+
+public class Class {
+	private object b;
+	private Class c;
+	public object B { set { b = value; } }
+	public object C { set { c = (Class) value; } }
+	public object D { set { } }
+}");
+		}
+
 		public static void CompileAndDump(string sourceCode)
 		{
 			var assemblyPath = AssemblyCompiler.Compile(sourceCode);

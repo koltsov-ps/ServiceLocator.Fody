@@ -67,7 +67,19 @@ public partial class ModuleWeaver
 			dependencyGraph.AddCustomFactoryMethod(method);
 		}
 
-		foreach (var interfaceMethod in interfaceDef.Methods)
+		var properties = interfaceDef.Properties;
+		var propertiesMethods = properties.SelectMany(x =>
+			{
+				var methods = new List<MethodDefinition>();
+				if (x.GetMethod != null)
+					methods.Add(x.GetMethod);
+				if (x.SetMethod != null)
+					methods.Add(x.SetMethod);
+				return methods;
+			})
+			.ToList();
+
+		foreach (var interfaceMethod in interfaceDef.Methods.Except(propertiesMethods))
 		{
 			if (interfaceMethod.Name.StartsWith("Create", StringComparison.InvariantCultureIgnoreCase))
 			{
@@ -80,6 +92,20 @@ public partial class ModuleWeaver
 				queryNode.Prototypes.Add(interfaceMethod);
 			}
 		}
+
+		foreach (var property in interfaceDef.Properties)
+		{
+			var getMethod = property.GetMethod;
+			if (getMethod != null)
+			{
+				var queryNode = dependencyGraph.AddQueryEntry(getMethod.ReturnType);
+				queryNode.Prototypes.Add(getMethod);
+				queryNode.Properties.Add(property);
+			}
+		}
+
 		new Emitter().Emit(type, interfaceDef, dependencyGraph);
 	}
+
+
 }

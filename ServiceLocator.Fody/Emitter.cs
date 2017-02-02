@@ -9,23 +9,31 @@ using ServiceLocator.Fody.GraphMechanics;
 public class Emitter
 {
 	private MethodAttributes defaultGetterMethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig | MethodAttributes.VtableLayoutMask;
-
+	private TypeDefinition type;
 	public void Emit(TypeDefinition type, TypeDefinition interfaceType, DependencyGraph graph)
 	{
+		this.type = type;
 		var nodesToGenerate = graph.TopSort();
 		type.Interfaces.Add(interfaceType);
 		foreach (var node in nodesToGenerate)
 		{
-			EmitNode(type, node);
+			EmitNode(node);
+		}
+		var orphanSetters = interfaceType.Properties.Where(x => x.GetMethod == null);
+		foreach (var orphanSetter in orphanSetters)
+		{
+			var prop = EmitOrphanSetter(orphanSetter);
+			type.Properties.Add(prop);
+			type.Methods.Add(prop.SetMethod);
 		}
 	}
 
-	private void EmitNode(TypeDefinition type, IGraphNode node)
+	private void EmitNode(IGraphNode node)
 	{
 		var implNode = node as ImplementationNode;
 		if (implNode != null)
 		{
-			var methodAndIsEmmitedList = EmitCreateMethods(type, implNode)
+			var methodAndIsEmmitedList = EmitCreateMethods(implNode)
 				.ToList();
 			foreach (var methodAndIsEmmited in methodAndIsEmmitedList)
 			{
@@ -40,10 +48,15 @@ public class Emitter
 		var queryNode = node as QueryNode;
 		if (queryNode != null)
 		{
-			var field = EmitField(type, queryNode);
-			var methods = EmitGetters(type, queryNode, field)
+			var emittedField = queryNode.Impl.Emission.EmitedField;
+			var field = emittedField ?? EmitField(type, queryNode);
+			var methods = EmitGetters(queryNode, field)
 				.ToList();
-			type.Fields.Add(field);
+			if (emittedField == null)
+			{
+				type.Fields.Add(field);
+				queryNode.Impl.Emission.EmitedField = field;
+			}
 			foreach (var method in methods)
 				type.Methods.Add(method);
 
@@ -53,6 +66,8 @@ public class Emitter
 			{
 				type.Properties.Add(prop);
 				type.Methods.Add(prop.GetMethod);
+				if (prop.SetMethod != null)
+					type.Methods.Add(prop.SetMethod);
 			}
 
 			//TODO: if only property exists, default getter will be generated
@@ -60,18 +75,18 @@ public class Emitter
 		}
 	}
 
-	private IEnumerable<Tuple<MethodDefinition, bool>> EmitCreateMethods(TypeDefinition type, ImplementationNode implNode)
+	private IEnumerable<Tuple<MethodDefinition, bool>> EmitCreateMethods(ImplementationNode implNode)
 	{
 		if (implNode.Prototypes.Count > 0)
 		{
 			foreach (var method in implNode.Prototypes)
 			{
-				yield return EmitImplementation(type, implNode, method);
+				yield return EmitImplementation(implNode, method);
 			}
 		}
 		else
 		{
-			yield return EmitImplementation(type, implNode);
+			yield return EmitImplementation(implNode);
 		}
 	}
 
@@ -80,13 +95,13 @@ public class Emitter
 		return new MethodDefinition(prototype.Name, defaultGetterMethodAttributes, prototype.ReturnType);
 	}
 
-	private MethodDefinition CreateMethodDefinition(string prefix, TypeDefinition type, BaseNode implNode)
+	private MethodDefinition CreateMethodDefinition(string prefix, BaseNode implNode)
 	{
 		var returnType = implNode.ImportTypeIfNeeded(type.Module);
 		return new MethodDefinition( $"{prefix}{implNode.Type.Name}", MethodAttributes.Private | MethodAttributes.HideBySig, returnType);
 	}
 
-	private Tuple<MethodDefinition, bool> EmitImplementation(TypeDefinition type, ImplementationNode implNode, MethodDefinition methodPrototype = null)
+	private Tuple<MethodDefinition, bool> EmitImplementation(ImplementationNode implNode, MethodDefinition methodPrototype = null)
 	{
 		var factoryMethod = implNode.CreationMethod as FactoryMethod;
 		if (factoryMethod != null && !factoryMethod.Method.HasParameters)
@@ -94,7 +109,7 @@ public class Emitter
 
 		var method = methodPrototype != null
 			? CreateMethodDefinitionFromPrototype(methodPrototype)
-			: CreateMethodDefinition("Create", type, implNode);
+			: CreateMethodDefinition("Create", implNode);
 		var body = method.Body;
 		var processor = body.GetILProcessor();
 
@@ -132,12 +147,11 @@ public class Emitter
 
 	private IEnumerable<PropertyDefinition> EmitProperties(QueryNode queryNode, FieldDefinition field)
 	{
-		return queryNode.Prototypes
-			.Where(m => m.IsGetter)
-			.Select(m => EmitProperty(queryNode, m.Name, m.ReturnType, field));
+		return queryNode.Properties
+			.Select(p => EmitProperty(queryNode, p.Name, p, field));
 	}
 
-	private IEnumerable<MethodDefinition> EmitGetters(TypeDefinition type, QueryNode queryNode, FieldDefinition field)
+	private IEnumerable<MethodDefinition> EmitGetters(QueryNode queryNode, FieldDefinition field)
 	{
 		if (queryNode.Prototypes.Count > 0)
 		{
@@ -150,21 +164,29 @@ public class Emitter
 		}
 		else
 		{
-			var method = CreateMethodDefinition("Get", type, queryNode);
+			var method = CreateMethodDefinition("Get", queryNode);
 			EmitGetterBody(queryNode, method, field);
 			yield return method;
 		}
 	}
 
-	private PropertyDefinition EmitProperty(QueryNode node, string name, TypeReference returnType, FieldDefinition field)
+	private PropertyDefinition EmitProperty(QueryNode node, string name, PropertyDefinition prototypeProperty, FieldDefinition field)
 	{
 		var pref = "get_";
 		var pureName = name.StartsWith(pref)
 			? name.Substring(pref.Length)
 			: name;
+		var returnType = prototypeProperty.GetMethod.ReturnType;
 		var property = new PropertyDefinition(pureName, PropertyAttributes.None, returnType);
-		property.GetMethod = new MethodDefinition(name, defaultGetterMethodAttributes | MethodAttributes.SpecialName, returnType);
+		property.GetMethod = new MethodDefinition("get_"+pureName, defaultGetterMethodAttributes | MethodAttributes.SpecialName, returnType);
 		EmitGetterBody(node, property.GetMethod, field);
+		if (prototypeProperty.SetMethod != null)
+		{
+			var setter = new MethodDefinition("set_"+pureName, defaultGetterMethodAttributes | MethodAttributes.SpecialName, prototypeProperty.SetMethod.ReturnType);
+			setter.Parameters.Add(new ParameterDefinition("value", ParameterAttributes.None, returnType));
+			property.SetMethod = setter;
+			EmitSetterBody(node, setter, field);
+		}
 		return property;
 	}
 
@@ -192,6 +214,34 @@ public class Emitter
 		processor.Emit(OpCodes.Stfld, field);
 		processor.Emit(OpCodes.Ldloc_0);
 		processor.Append(ret);
+	}
+
+	private void EmitSetterBody(QueryNode node, MethodDefinition method, FieldDefinition field)
+	{
+		var body = method.Body;
+		var processor = body.GetILProcessor();
+		processor.Emit(OpCodes.Ldarg_0);
+		processor.Emit(OpCodes.Ldarg_1);
+		processor.Emit(OpCodes.Castclass, field.FieldType);
+		processor.Emit(OpCodes.Stfld, field);
+		processor.Emit(OpCodes.Ret);
+	}
+
+	private PropertyDefinition EmitOrphanSetter(PropertyDefinition prototypeProperty)
+	{
+		var pureName = prototypeProperty.Name;
+		var paramType = prototypeProperty.SetMethod.Parameters[0].ParameterType;
+		var property = new PropertyDefinition(pureName, PropertyAttributes.None, paramType);
+		if (prototypeProperty.SetMethod != null)
+		{
+			var setter = new MethodDefinition("set_"+pureName, defaultGetterMethodAttributes | MethodAttributes.SpecialName, prototypeProperty.SetMethod.ReturnType);
+			setter.Parameters.Add(new ParameterDefinition("value", ParameterAttributes.None, paramType));
+			property.SetMethod = setter;
+			var body = setter.Body;
+			var processor = body.GetILProcessor();
+			processor.Emit(OpCodes.Ret);
+		}
+		return property;
 	}
 
 	private FieldDefinition EmitField(TypeDefinition type, QueryNode queryNode)

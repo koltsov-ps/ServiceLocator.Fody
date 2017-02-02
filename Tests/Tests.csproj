@@ -78,6 +78,7 @@
     <Compile Include="Helpers\Verifier.cs" />
     <Compile Include="Helpers\WeaverHelper.cs" />
     <Compile Include="TestCases\GetterImplementation_Test.cs" />
+    <Compile Include="TestCases\SetterImplementation_Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ServiceLocator.Fody\ServiceLocator.Fody.csproj">
