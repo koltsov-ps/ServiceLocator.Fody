@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\AssemblyCompiler.cs" />
+    <Compile Include="TestCases\MultiConstructors_Test.cs" />
     <Compile Include="TestCases\CreateWithParams_Test.cs" />
     <Compile Include="TestCases\CustomConstructor_Test.cs" />
     <Compile Include="TestCases\Errors_Test.cs" />

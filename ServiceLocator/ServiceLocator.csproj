@@ -37,6 +37,7 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ContainerCustructorAttribute.cs" />
     <Compile Include="ImplementServiceLocatorAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SearchImplementationsInAttribute.cs" />

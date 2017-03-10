@@ -93,7 +93,13 @@ namespace ServiceLocator.Fody.DependencyEngine
 				.ToList();
 			if (publicConstructors.Count == 1)
 				return publicConstructors[0];
-			throw new NotSupportedException($"Multiple constructors are not supported yet. ({type.FullName})");
+			var attrName = typeof(ContainerConstructorAttribute).Name;
+			var containerConstructurs = publicConstructors
+				.Where(x => x.CustomAttributes.Any(y => y.AttributeType.Name == attrName))
+				.ToList();
+			if (containerConstructurs.Count == 1)
+				return containerConstructurs[0];
+			throw new NotSupportedException($"Type has multiple constructors. Use attribute [{attrName}] to select one of them. (Type: {type.FullName})");
 		}
 	}
 }
