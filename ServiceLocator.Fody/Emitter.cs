@@ -19,12 +19,28 @@ public class Emitter
 		{
 			EmitNode(node);
 		}
-		var orphanSetters = interfaceType.Properties.Where(x => x.GetMethod == null);
-		foreach (var orphanSetter in orphanSetters)
+		//orphanSetters
+		foreach (var property in interfaceType.Properties)
 		{
-			var prop = EmitOrphanSetter(orphanSetter);
-			type.Properties.Add(prop);
-			type.Methods.Add(prop.SetMethod);
+			if (property.GetMethod != null)
+				continue;
+			var propertyFromType = type.Properties.FirstOrDefault(x => string.Equals(x.Name, property.Name, StringComparison.InvariantCulture));
+			if (propertyFromType != null && propertyFromType.SetMethod != null)
+			{
+				propertyFromType.SetMethod.Attributes = defaultGetterMethodAttributes | MethodAttributes.SpecialName;
+			}
+			else if (propertyFromType != null)
+			{
+				var prop = EmitOrphanSetter(property);
+				propertyFromType.SetMethod = prop.SetMethod;
+				type.Methods.Add(prop.SetMethod);
+			}
+			else
+			{
+				var prop = EmitOrphanSetter(property);
+				type.Properties.Add(prop);
+				type.Methods.Add(prop.SetMethod);
+			}
 		}
 	}
 
@@ -46,7 +62,7 @@ public class Emitter
 			return;
 		}
 		var queryNode = node as QueryNode;
-		if (queryNode != null)
+		if (queryNode != null && queryNode.Emission.GetterMethod == null)
 		{
 			var emittedField = queryNode.Impl.Emission.EmitedField;
 			var field = emittedField ?? EmitField(type, queryNode);
@@ -72,6 +88,13 @@ public class Emitter
 
 			//TODO: if only property exists, default getter will be generated
 			queryNode.Emission.GetterMethod = methods.FirstOrDefault() ?? props.FirstOrDefault()?.GetMethod;
+		}
+		else if (queryNode != null && queryNode.Emission.GetterMethod != null)
+		{
+			//foreach (var property in queryNode.Properties)
+			//{
+				queryNode.Emission.GetterMethod.Attributes = defaultGetterMethodAttributes | MethodAttributes.SpecialName;
+			//}
 		}
 	}
 

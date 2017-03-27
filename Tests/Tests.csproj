@@ -80,6 +80,7 @@
     <Compile Include="Helpers\Verifier.cs" />
     <Compile Include="Helpers\WeaverHelper.cs" />
     <Compile Include="TestCases\GetterImplementation_Test.cs" />
+    <Compile Include="TestCases\ReuseProperties_Test.cs" />
     <Compile Include="TestCases\SetterImplementation_Test.cs" />
   </ItemGroup>
   <ItemGroup>

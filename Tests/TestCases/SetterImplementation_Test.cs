@@ -88,18 +88,18 @@ public interface IServiceLocator
 	IA IA {get; set;}
 	A A {get; set;}
 	object Orphan { set; }
-	B B1 { set; }
-	B B2 { get; set; }
+	//B B1 { set; }
+	//B B2 { get; set; }
 	B B3 { get; }
-	B B4 { set; }
+	//B B4 { set; }
 }
 
 [ImplementServiceLocator(typeof(IServiceLocator))]
 public class ServiceLocator {
-	public B B1 { get; set; }
-	public B B2 { get; set; }
-	public B B3 { get; set; }
-	public B B4 { get; }
+	//public B B1 { get; set; }
+	//public B B2 { get; set; }
+	public B B3 { get { return null; } }
+	//public B B4 { get; }
 }
 ";
 	}

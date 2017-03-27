@@ -14,7 +14,7 @@ namespace ServiceLocator.Fody.DependencyEngine
 
 		public ImplementationNode Impl { get; }
 		public Emission Emission { get; } = new Emission();
-		public IGraphNode[] NextNodes => new IGraphNode[] { Impl };
+		public IGraphNode[] NextNodes => Impl != null ? new IGraphNode[] { Impl } : new IGraphNode[0];
 		public List<PropertyDefinition> Properties { get; } = new List<PropertyDefinition>();
 		public override string ToString() => Type.FullName;
 	}

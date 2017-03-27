@@ -95,6 +95,23 @@ namespace ServiceLocator.Fody.DependencyEngine
 				TraverceCreationMethodParameters(implNode, null);
 		}
 
+		public void TryAddCustomProperty(PropertyDefinition property)
+		{
+			QueryNode queryNode;
+			var queryType = property.PropertyType;
+			if (queryNodes.TryGetValue(queryType, out queryNode))
+			{
+				queryNode.Properties.Add(property);
+				log.Info($"Add custom property: {property.PropertyType.Name} => {property.Name}");
+				return;
+			}
+			queryNode = new QueryNode(queryType, null);
+			queryNode.Properties.Add(property);
+			queryNode.Emission.GetterMethod = property.GetMethod;
+			queryNodes.Add(queryType, queryNode);
+			log.Info($"Add custom property: {property.PropertyType.Name} => {property.Name}");
+		}
+
 		private bool TryAddImplementation(TypeDefinition typeDefinition, Func<TypeDefinition, CreationMethod> getCreationMethod, out ImplementationNode implNode)
 		{
 			if (implNodes.TryGetValue(typeDefinition, out implNode))

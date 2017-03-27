@@ -67,6 +67,11 @@ public partial class ModuleWeaver
 			dependencyGraph.AddCustomFactoryMethod(method);
 		}
 
+		foreach (var property in type.Properties)
+		{
+			dependencyGraph.TryAddCustomProperty(property);
+		}
+
 		var properties = interfaceDef.Properties;
 		var propertiesMethods = properties.SelectMany(x =>
 			{
