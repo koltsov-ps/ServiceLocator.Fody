@@ -1,74 +1,100 @@
 ![Icon](https://raw.github.com/Fody/BasicFodyAddin/master/Icons/package_icon.png)
 
-This is a simple solution built as a starter for writing [Fody](https://github.com/Fody/Fody) addins.
+Это библиотека для генерации ServiceLocator’а на этапе компиляции. Реализована с использованием [Fody](https://github.com/Fody/Fody) /Библиотека находится в разработке, и пока не предназначена для использования в продакшене./
+ 
+## Что такое ServiceLocator?
+ServiceLocator — это поражающий паттерн следующего вида:
 
-## The moving parts
+```
+public class ServiceLocator
+{
+	IServiceA a;
+	public IServiceA ServiceA 
+		=> a ?? (a = new ServiceA(ServiceB));
 
-### BasicFodyAddin Project
+	IServiceB b;
+	public IServiceB ServiceB
+		=> b ?? (b = new ServiceB());
+}
+```
 
-The project that does the weaving. 
+Это класс, который лениво создает дерево объектов таким образом, чтобы каждый объект был создан не более одного раза. В приведенном выше примере при создании ServiceA используется созданный или создается новый объект ServiceB.
 
-#### Output of the project
+## А почему не Dependency Injection контейнер?
+ServiceLocator не требует конфигурирования на старте приложения. Все что требуется для его работы уже посчитано и скомпилировано.
+Этот паттерн прекрасно подходит для создания мобильных приложений на Xamarin, где время старта приложения является очень важным параметром. Если требуется скорость запуска приложения и не требуется гибкая настройка, то ServiceLocator подходит хорошо.
 
-It outputs a file named SampleFodyAddin.Fody. The '.Fody' suffix is necessary for it to be picked up by Fody.
+## Как подключить к проекту?
+Через [NuGet](https://www.nuget.org/packages/ServiceLocator.Fody/)
 
-#### ModuleWeaver
+## Как использовать?
+Использовать ServiceLocator.Fody предлагается следующим образом:
+1. Описать интерфейс на основе, которого будет сгененрировано дерево зависимостей. 
+2. Описать класс, в котором надо будет сгенерировать код реализации интерфейса.
 
-ModuleWeaver.cs is where the target assembly is modified. Fody will pick up this type during a its processing.
+Например так:
+```
+public interface IServiceLocator
+{
+	IRepository Repository { get; }
+}
 
-In this case a new type is being injected into the target assembly that looks like this.
+[ImplementServiceLocator(typeof(IServiceLocator))]
+public class ServiceLocator {
+	private IServiceLocator instance;
+	public static IServiceLocator Instance
+		=> instance ?? (instance = (IServiceLocator) new ServiceLocator());
+}
 
-	public class Hello
-	{
-	    public string World()
-	    {
-	        return "Hello World";
-	    }
+//Теперь для создания репозитория в основной программе делаем так:
+var repo = ServiceLocator.Instance.Repository;
+```
+
+## Возможности
+
+### Создание Singleton объекта через определение свойства или метода
+```
+public interface IServiceLocator {
+	IService1 Service1 { get; }
+  IService2 GetService2();
+}
+```
+
+### Создание нового экземпляра класса, при каждом вызове, если название метода начинается с Create
+```
+public interface IServiceLocator {
+  IService CreateService();
+}
+```
+
+### При создании нового экземпляра посредством Create-метода, можно передавать аргументы для конструктора.
+```
+public class Database : IRepository {
+	public Database (string path) {
+		//…
 	}
+}
 
-See [ModuleWeaver](https://github.com/Fody/Fody/wiki/ModuleWeaver)
- for more details.
+public interface IServiceLocator {
+	IRepository CreateRepository(string path);
+}
+```
+Если для создания экземпляра класса требуются параметры, которые можно получить только с наружи, то их следует передать в качестве параметров в Create-метод. При этом имена параметров в конструкторе класса и в сигнатуре метода должны совпадать. В данном примере для создания класса Database нужен параметр path. Его следует передать в метод CreateRepository.
 
-### Nuget Project
-
-Fody addins are deployed as [nuget](http://nuget.org/) packages. NugetProject builds the package for SampleFodyAddin as part of a build. The output of this project is placed in *SolutionDir*/NuGetBuild. 
-
-This project uses  [pepita](https://github.com/SimonCropp/Pepita) to construct the package but you could also use nuget.exe.
-
-For more information on the nuget structure of Fody addins see [DeployingAddinsAsNugets](https://github.com/Fody/Fody/wiki/DeployingAddinsAsNugets)
-
-
-### AssemblyToProcess Project
-
-A target assembly to process and then validate with unit tests.
-
-### Tests  Project
-
-This is where you would place your unit tests. 
-
-Note that it does not reference AssemblyToProcess as this could cause assembly loading issues. However we want to force AssemblyToProcess to be built prior to the Tests project. So in Tests.csproj there is a non-reference dependency to force the build order.
-
-    <ProjectReference Include="..\AssemblyToProcess\AssemblyToProcess.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-
-The test assembly contains three parts.
-
-#### 1. WeaverHelper
-
-A helper class that takes the output of  AssemblyToProcess and uses ModuleWeaver to process it. It also create a copy of the target assembly suffixed with '2' so a side-by-side comparison of the before and after IL can be done using a decompiler.
-
-#### 2. Verifier
-
-A helper class that runs [peverfiy](http://msdn.microsoft.com/en-us/library/62bwd2yd.aspx) to validate the resultant assembly.
-
-#### 3. Tests
-
-The actual unit tests that use WeaverHelper and Verifier. It has one test to construct and execute the injected class.
-
-### No reference to Fody
-
-Not that there is no reference to Fody nor are any Fody files included in the solution. Interaction with Fody is done by convention at compile time.
+### Если в дереве объектов есть сложный объект и есть необходимость написать специальный код для его создания, то следует это сделать в классе, реализующем интерфейс ServiceLocator’а.
+```
+public class IServiceLocator {
+	…
+}
+[ImplementServiceLocator(typeof(IServiceLocator))]
+public class ServiceLocator {
+	private static Database CreateDatabase() {
+		…
+		return new Database(…);
+	} 
+}
+```
+Если при создании дерева объектов понадобится создать экземпляр Database, то для этого будет вызван метод ServiceLocator.CreateDatabase.
 
 ## Icon
 
